@@ -1,5 +1,7 @@
 #include<stdio.h>
+#include<stdlib.h>
 #include<string.h>
+#include<time.h>
   
 char dummy;
 
@@ -13,9 +15,9 @@ typedef struct WORD_PLAYED{
   int fail;
 }word_played;
 
-void hangman_game(word_played data[]);
-void dispwordlist(word_played data[]);
-char select_word();
+void hangman_game(word_played data[]);//ハングマンの
+void dispwordlist(word_played data[]);//プレイした単語のリストを表示
+char select_word();//ファイル等から単語選択
 
 int main(){
   word_played w[1500];
@@ -27,8 +29,7 @@ int main(){
 
   //プロンプト
   while(1){
-    char option;
-    char correct[50];  
+    char option; 
     printf("$オプションを選択\n");
     printf("$C:続ける,始める Q:やめる L:出てきたワードのリストとその詳細\n");
     printf("$>");
@@ -43,6 +44,10 @@ int main(){
     if(option=='L'||option=='l'){
       dispwordlist(w);
     }
+    if(option=='R'||option=='r'){
+      srand((unsigned)time(NULL));
+      select_word();
+    }
   }
 }
 
@@ -53,6 +58,7 @@ void hangman_game(word_played data[]){
   char correct[51];
   int correct_len;
   int remain;
+
   memset(inputed,0,sizeof(inputed));
   tried=0;
   printf("$単語を入力>");
@@ -135,4 +141,47 @@ void dispwordlist(word_played data[]){
 }
 
 char select_word(){
+  FILE *fp;
+  int filesize;
+  int filepos;
+  char sentence[151];
+  char words[51];
+  char c;//fget用
+  int count=0;
+
+  //ファイル読み込み、サイズ取得、ファイルのランダムな場所にシーク
+  fp = fopen("toeic1500_utf.dat","rb");
+  fseek(fp,0,SEEK_END);
+  filesize=ftell(fp);
+  filepos=rand()%filesize;
+  fseek(fp,filepos,SEEK_SET);
+
+  //単語探索　行頭にシーク→行読み込み
+  if((float)filepos / filesize < 0.5){//シーク場所がテキストファイルの前半の時の処理
+    while(((c=fgetc(fp)) != '\n')){
+      filepos++;
+      fseek(fp,filepos,SEEK_SET);
+    }
+    while(((c=fgetc(fp)) != '\n')){
+      filepos++;
+      fseek(fp,filepos,SEEK_SET);
+      sentence[count]=(char)fgetc(fp);
+      count++;
+    }
+  } 
+  else{//シーク場所がテキストファイルの後半の時の処理
+    while((c=fgetc(fp)) != '\n'){
+      filepos--;
+      fseek(fp,filepos,SEEK_SET);
+    }
+    while(((c=fgetc(fp)) != '\n')){
+      filepos++;
+      fseek(fp,filepos,SEEK_SET);
+      sentence[count]=(char)fgetc(fp);
+      count++;
+    }
+  }
+  printf("%s\n",words);
+
+  fclose(fp);
 }
