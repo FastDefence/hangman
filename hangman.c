@@ -17,7 +17,7 @@ typedef struct WORD_PLAYED{
 
 void hangman_game(word_played data[]);//ハングマンの
 void dispwordlist(word_played data[]);//プレイした単語のリストを表示
-char select_word();//ファイル等から単語選択
+char* select_word();//ファイル等から単語選択
 
 int main(){
   word_played w[1500];
@@ -33,7 +33,8 @@ int main(){
     printf("$オプションを選択\n");
     printf("$C:続ける,始める Q:やめる L:出てきたワードのリストとその詳細\n");
     printf("$>");
-    scanf("%c%c",&option,&dummy);
+    scanf("%c",&option);
+    scanf("%c",&dummy);
 
     if(option=='C'||option=='c'){
       hangman_game(w);
@@ -44,13 +45,8 @@ int main(){
     if(option=='L'||option=='l'){
       dispwordlist(w);
     }
-    if(option=='R'||option=='r'){
-      srand((unsigned)time(NULL));
-      select_word();
-    }
   }
 }
-
 
 void hangman_game(word_played data[]){  
   int inputed[26];  
@@ -61,10 +57,10 @@ void hangman_game(word_played data[]){
 
   memset(inputed,0,sizeof(inputed));
   tried=0;
-  printf("$単語を入力>");
-  scanf("%s%c",correct,&dummy);//後でファイル読み込みの処理にかえる
+  strcpy(correct,select_word());
   correct_len=strlen(correct);
   remain=correct_len;
+  printf("%s\n",correct);
 
   disp d[correct_len];
   for(int i=0;i<correct_len;i++){
@@ -82,7 +78,6 @@ void hangman_game(word_played data[]){
     int charflag=0;
     printf("$単語の文字を入力してください>");
     scanf("%c%c",&key,&dummy);
-
     //文字照合
     for(int i=0;i<correct_len;i++){
       if(key==d[i].resdisp){
@@ -93,7 +88,6 @@ void hangman_game(word_played data[]){
         }
       }
     }
-
     //お手付き時,使用された文字の確認
     if(charflag==0){
       if(inputed[key-'a']==0){
@@ -102,7 +96,6 @@ void hangman_game(word_played data[]){
       }
     }
     inputed[key-'a']++;
-
     //結果の表示
     printf("$");
     for(int i=0;i<correct_len;i++){
@@ -112,7 +105,6 @@ void hangman_game(word_played data[]){
       else{printf("-");}
     }
     printf("\n");
-
     //使用した単語の表示
     printf("$使用した単語:");
     for(int i=0;i<26;i++){
@@ -126,6 +118,7 @@ void hangman_game(word_played data[]){
   //正解時と不正解時の処理
   if(tried>=7){
     printf("Game Over\n");
+    printf("$正解は%sでした！",correct);
     data[var].fail++;
   }
   if(remain==0){
@@ -136,33 +129,37 @@ void hangman_game(word_played data[]){
 
 void dispwordlist(word_played data[]){
   for(int i=0;strcmp(data[i].word,"#")!=0;i++){
-    printf("%s:正解%d回 不正解%d回\n",data[i].word,data[i].clear,data[i].fail);
+    double ratio=(double)(data[i].clear)/(double)(data[i].clear+data[i].fail);
+    printf("%s:正解%d回 不正解%d回 ",data[i].word,data[i].clear,data[i].fail);
+    printf("正答率は%d%%です\n",(int)(ratio*100));
   }
 }
 
-char select_word(){
+char* select_word(){
   FILE *fp;
   int filesize;
   int filepos;
   char sentence[151];
   char words[51];
-  char c;//fget用
+  char c;
   int count=0;
+  int flag=0;
 
   //ファイル読み込み、サイズ取得、ファイルのランダムな場所にシーク
+  srand((unsigned)time(NULL));
   fp = fopen("toeic1500_utf.dat","rb");
   fseek(fp,0,SEEK_END);
   filesize=ftell(fp);
   filepos=rand()%filesize;
   fseek(fp,filepos,SEEK_SET);
 
-  //単語探索　行頭にシーク→行読み込み
+  //行抜出し
   if((float)filepos / filesize < 0.5){//シーク場所がテキストファイルの前半の時の処理
-    while(((c=fgetc(fp)) != '\n')){
+    while(((c=fgetc(fp))!='\n')){
       filepos++;
       fseek(fp,filepos,SEEK_SET);
     }
-    while(((c=fgetc(fp)) != '\n')){
+    while(((c=fgetc(fp))!='\n')){
       filepos++;
       fseek(fp,filepos,SEEK_SET);
       sentence[count]=(char)fgetc(fp);
@@ -170,18 +167,34 @@ char select_word(){
     }
   } 
   else{//シーク場所がテキストファイルの後半の時の処理
-    while((c=fgetc(fp)) != '\n'){
+    while((c=fgetc(fp))!='\n'){
       filepos--;
       fseek(fp,filepos,SEEK_SET);
     }
-    while(((c=fgetc(fp)) != '\n')){
+    while(((c=fgetc(fp))!='\n')){
       filepos++;
       fseek(fp,filepos,SEEK_SET);
       sentence[count]=(char)fgetc(fp);
       count++;
     }
   }
-  printf("%s\n",words);
+  //英単語抜出し
+  count=0;
+  for(int i=0;sentence[i]!='\0';i++){
+    if((sentence[i]>='a'&&sentence[i]<='z')||(sentence[i]>='A'&&sentence[i]<='Z')){
+      words[count]=sentence[i];
+      count++;
+    }
+    else if(count>0){
+      break;
+    }
+  }
+  words[count]='\0';
+  //返す文字列変数の作成
+  char* words_return=NULL;
+  words_return=(char*)malloc(sizeof(char)*strlen(words));
+  strcpy(words_return,words);
 
   fclose(fp);
+  return words_return;
 }
